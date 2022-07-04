@@ -41,7 +41,7 @@ class vul_model:
             print('  ')
             r = []
             r_n = []
-            path2 = path + vul_model.carpetas[k]
+            path2 = vul_model.direccion + vul_model.carpetas[k]
             vul_model.archivos = os.listdir( path2)
             for i in range(0,len(vul_model.archivos)):
 
