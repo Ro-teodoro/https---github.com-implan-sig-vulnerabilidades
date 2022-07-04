@@ -45,7 +45,7 @@ class vul_model:
             vul_model.archivos = os.listdir( path2)
             for i in range(0,len(vul_model.archivos)):
 
-                print('cargando: '+path + path2+ '/' +vul_model.archivos[i])
+                print('cargando: '+vul_model.direccion + path2+ '/' +vul_model.archivos[i])
                 r_n.append(vul_model.archivos[i])
                 r.append( rst.open(path2+ '/' +vul_model.archivos[i]).read(1))
 
