@@ -135,7 +135,7 @@ class vul_model:
 
     def plot_sub_analisis (self,word):
         plt.figure(figsize = (30,20))
-        plt.imshow(tijuana.frames_sum[tijuana.frames_sum['categoria']==word]['raster sum'][0])
+        plt.imshow(vul_model.frames_sum[vul_model.frames_sum['categoria']==word]['raster sum'][0])
         plt.colorbar()
         plt.show()
 
