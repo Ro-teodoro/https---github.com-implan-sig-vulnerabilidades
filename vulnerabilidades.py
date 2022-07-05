@@ -9,38 +9,38 @@ from rasterio.transform import from_origin
 
 
 class vul_model:
-
-
-
+    ''' modelo de vulnerabilidades con inclucion de sub analisis, la manera de correr el proyecto es guardando los rasters de analisis previamente normalizados en 
+    carpetas que seran los subanalisis, para inicializar el proyecto solo hace falta agregar la direccion de la carpeta donde se encuentran las otras carpetas
+    de sub analisis'''
 
     def NormalizeData(data):
-    
-        return (data - np.min(data)) / (np.max(data) - np.min(data))
-
-    #constructor: 
+        ''' los datos seran normalizados en una escala de 0 a 1 '''
+        return (data - np.min(data)) / (np.max(data) - np.min(data))  #normalizamos los datos
+        
     def __init__(self, direccion):
 
-        vul_model.direccion = direccion
+        vul_model.direccion = direccion  #guardamos la direccion de las carpetas de los anlisis
 
-        p=os.listdir(direccion)
-        vul_model.carpetas = []
+        p=os.listdir(direccion)   
+        vul_model.carpetas = []  #creamos la variable donde guardamos el nombre de las carpetas
 
-        for i in p: #agregamos las carpetas a lista
+        for i in p: #agregamos las carpetas a lista SOLO SI son carpetas, se ignoran los archivos
             if os.path.isdir(direccion+i): 
                 vul_model.carpetas.append(i)
         
         print('Se agregaron las carpetas de analisis: ' ,vul_model.carpetas )
 
-        vul_model.rr =[]
-
-        vul_model.r_names =[]
+        #creamos los vectores en losque seran guardados los datos
+        vul_model.rr =[]  # datos de cada archivo
+        vul_model.r_names =[] #nombres de los archivos
 
         for k in range(0,len(vul_model.carpetas)): #importamos todos lo datos
             print('  ')
             print('cargando capas de: '+ vul_model.carpetas[k])
             print('  ')
-            r = []
+            r = []   #se resetea estos vectores en cada iteracion
             r_n = []
+
             path2 = vul_model.direccion + vul_model.carpetas[k]
             vul_model.archivos = os.listdir( path2)
             for i in range(0,len(vul_model.archivos)):
@@ -55,11 +55,13 @@ class vul_model:
         print(' ')    
         print('ha terminado la carga')    
 
+        #se filtran los rasters para que todos tengan las mismas medidas y extenciones con los tamaños miniimos de raster
         print('  ')
         print('filtrando rasters...')
         shapes0=[]
         shapes1=[]
 
+        #obtenemos los valores minimos en ambos ejes
         for k in range(0,len(vul_model.rr)):
             for i in vul_model.rr[k]:
                 shapes0.append(i.shape[0])
@@ -68,6 +70,7 @@ class vul_model:
         min1=min(shapes0)
         min2=min(shapes1)
 
+        #se filtran los rasters
         for k in range(0,len(vul_model.rr)):
             for i in range(0,len(vul_model.rr[k])):
 
@@ -98,23 +101,38 @@ class vul_model:
         print('modelo inicializado')
          
     def norm_indiv(self, carp,capa):
+        ''' se normalizan individualemnte los preanalisis si es necesario: model.norm_indiv(carp,capa) 
+        parametros: 
+        carp (int)-> es el la carpeta que sera normalizada
+        capa (int)-> es la capa que sera normalizada
+        '''
         vul_model.frames[carp]['rasters'][capa] = vul_model.NormalizeData(vul_model.frames[carp]['rasters'][capa][0])
 
     def norm_sum(self):
+        '''se normalizan los pre analisis de ser necesario: model.norm_sum().'''
         for i in range(0, len(vul_model.frames_sum)):
             vul_model.frames_sum['raster sum'][i] = vul_model.NormalizeData( vul_model.frames_sum['raster sum'][i])
 
     def add_pond(self, frame, pond_list):
+        '''Se agrega la ponderacion a los diferentes analisis: model.add_pond(frame, pond_list)
+        parametros:
+        frame (int)       -> la carpeta de subproceso a la que se le agrega la lista de ponderacion
+        pond_list (lista) -> lista de ponderaciones en el orden en el que se encuentra en el data frame
+        '''
         vul_model.frames[frame]['pond']= pond_list
         print('   ')
         print('ponderacion agregada... ')
 
-    def add_gen_pond(seld,pond_list):
+    def add_gen_pond(self,pond_list):
+        '''Se agrega la ponderacion general para el analisis final: model.add_gen_pond(pond_list)
+        parametros: 
+        pond_list (lista) -> lista de ponderaciones en el orden en el que aparecen en el data frame del analisis 
+        '''
         for i in range(0,len(vul_model.frames_sum)):
             vul_model.frames_sum['pond'] = pond_list
 
     def sub_analisis(self):
-
+        '''Corre el sub analisis para generar los rasters de cada subanalisis: model.sub_analisis()'''
         sum = np.zeros(vul_model.frames[0]['rasters'][0].shape,dtype=float)
 
         for i in range(0,len(vul_model.frames)): 
@@ -123,30 +141,52 @@ class vul_model:
                 vul_model.frames_sum['raster sum'][j] = sum
 
     def analisis(self):
-
+        '''Corre el analisis principal para generar el raster final: model.analisis()'''
         vul_model.g_sum = np.zeros(vul_model.frames_sum['raster sum'][0].shape,dtype=float)
         for i in range(0,len(vul_model.frames_sum)): 
             vul_model.g_sum = vul_model.g_sum + (vul_model.frames_sum['raster sum'][i] * vul_model.frames_sum['pond'][i] )
             vul_model.frames_sum['raster sum'][i] = vul_model.g_sum
         vul_model.g_sum = vul_model.NormalizeData(vul_model.g_sum)
-   
+
     def describe():
-        print(vul_model.carpetas)
+        ''' imprime una descripcion del modelo con el nombre de las capas que se usaran con cada sub analisis y sus ponderaciones ademas de la ponderacion final
+        model.describe()'''
+
+        for i in range(0,len(vul_model.carpetas)):
+            print('sub carpeta de analisis: '+vul_model.carpetas[i])
+            print('')
+            print(vul_model.frames[i][['rast_name', 'pond']])
+            print('**********************************************************************************')
+        print('')
+        print(' ponderacion de analisis final')
+        print('')
+        print(vul_model.frames_sum[['categoria','pond']])
 
     def plot_sub_analisis (self,word):
+        '''Grafica individualemnte el sub analisis generado despues de correr el subanalisis model.plot_sub_analisis(word)
+        parametros: 
+        mord (str) -> nombre del subanalisis, nombre de la carpeta que contiene el sub analisis
+        '''
+    
         plt.figure(figsize = (30,20))
         plt.imshow(vul_model.frames_sum[vul_model.frames_sum['categoria']==word]['raster sum'][0])
         plt.colorbar()
         plt.show()
 
-    def plot_analisis (self):
+    def plot_analisis (self): 
+        ''' Grafica el analisis despues de usar el comando de analisis model.plot_analisis()'''
+
         plt.figure(figsize = (30,20))
         plt.imshow(vul_model.g_sum )
         plt.colorbar()
         plt.show()
 
-
-    def export_raster(self, name, res): #exportar raster
+    def export_raster(self, name, res): 
+        ''' Exporta el raster final como archivo tif export_raster(name, res) 
+        parametros:
+        name (str)  -> nombre del archivo, debe contener su extencion, normalmente es *.tif
+        res (int)   -> resolucion del raster a utilizar, normalmente entre 5 y 30
+        '''
 
         a=rst.open( vul_model.direccion+'/'+vul_model.carpetas[len(vul_model.carpetas)-1]+'/'+vul_model.archivos[len(vul_model.archivos)-1])
         bounds=[0,0]
@@ -171,3 +211,25 @@ class vul_model:
         new_dataset.close()
         print('exportacion completa')        
 
+    def print_subC(self,sub_carp): #imprimir todos los rasters
+        ''' imprime todos los rasters de el sub analisis que se solicite print_subC(sub_carp) 
+        parametros: 
+        sub_carp (int) -> subcarpeta de analisis que desea graficar
+        '''
+
+        col=3
+        row= (int(len(vul_model.frames[sub_carp])/3))+1
+
+        fig, axs = plt.subplots(row, col,figsize=(15,15))
+
+        nn = 0 
+
+        for i in range(0,row):
+            for j in range(0,col):
+
+                if nn >len(vul_model.frames[sub_carp])-1: 
+                    break
+                else:
+                    axs[i,j].imshow(vul_model.frames[sub_carp]['rasters'][nn])
+                    axs[i,j].set_title(vul_model.frames[sub_carp]['rast_name'][nn])
+                    nn=nn+1
